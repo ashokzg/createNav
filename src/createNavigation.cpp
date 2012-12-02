@@ -15,6 +15,8 @@
 #include <std_msgs/Float32.h>
 #include <geometry_msgs/Twist.h>
 
+void setBotToStop(geometry_msgs::Twist& botVel);
+
 //Store all constants for image encodings in the enc namespace to be used later.
 namespace enc = sensor_msgs::image_encodings;
 
@@ -55,10 +57,15 @@ static robotNavCtrlMode_t navCtrlMode;
 image_transport::Publisher pub;
 ros::Publisher robotCmdPub;
 
+/* Publishes a UInt8 message with the following enum
+ *
+ */
+ros::Publisher robotStatusPub;
+
 void setRobotCtrlCallBack(const std_msgs::UInt8& ctrl)
 {
   //Check if the received value is within range and set the appropriate mode
-  if(ctrl.data >= (int)navOff && ctrl.data <= (int)manualNav)
+  if(ctrl.data >= (char)navOff && ctrl.data <= (char)manualNav)
   {
     ROS_INFO("Mode changed to %d (0:Off 1:Auto 2:Manual)", ctrl.data);
     navCtrlMode = (robotNavCtrlMode_t)ctrl.data;
@@ -69,6 +76,36 @@ void manualCtrlCallBack(const geometry_msgs::Twist& manCmdVel)
 {
   if(navCtrlMode == manualNav)
     robotCmdPub.publish(manCmdVel);
+}
+
+void robotStatusCallBack(const std_msgs::UInt8& robot_status)
+{
+
+  if(robot_status.data == 2)
+  {
+    navCtrlMode = navOff;
+    sysState = startPrgm;
+    /* Switching to manual navigation because the destination is lost*/
+    ROS_INFO("***ERROR: DESTINATION LOST. RESETTING TO INITIAL STATE TO RESUME OPERATION");
+  }
+  if(robot_status.data == 3)
+  {
+    ROS_INFO("---SUCCESS: REACHED DESTINATION, BITCH!!---");
+    sysState = robotCtrlOff;
+    geometry_msgs::Twist botVel;
+    setBotToStop(botVel);
+    robotCmdPub.publish(botVel);
+  }
+}
+
+void setBotToStop(geometry_msgs::Twist& botVel)
+{
+  botVel.linear.x = 0;
+  botVel.linear.y = 0;
+  botVel.linear.z = 0;
+  botVel.angular.x = 0;
+  botVel.angular.y = 0;
+  botVel.angular.z = 0;
 }
 
 void robotHeadingCallBack(const std_msgs::Float32& angle)
@@ -107,6 +144,9 @@ void coordCallBack(const sensor_msgs::RegionOfInterest& roi)
     ROS_INFO("DESTINATION RECEIVED BY ROBOT. WILL START NAVIGATION");
     sysState = robotCtrlOn;
     navCtrlMode = autoNav;
+    std_msgs::UInt8 pubState;
+    pubState.data = 1;
+    robotStatusPub.publish(pubState);
   }
   else
   {
@@ -172,17 +212,27 @@ int main(int argc, char **argv)
   ros::Subscriber manAuto   = nh.subscribe("RobotCtrlMode", 10, setRobotCtrlCallBack);
   ros::Subscriber angleSub  = nh.subscribe("robot_angle_variation", 10, robotHeadingCallBack);
   ros::Subscriber manCmd    = nh.subscribe("man_cmd_vel", 100, manualCtrlCallBack);
+  ros::Subscriber statusSub = nh.subscribe("robot_status", 1, robotStatusCallBack);
 
   //Initialize the publishers
   pub = it.advertise("userImage", 1);
   robotCmdPub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 100);
+  robotStatusPub = nh.advertise<std_msgs::UInt8>("robot_state", 10);
 
   //Initialize the system state
   sysState = startPrgm;
   navCtrlMode = navOff;
 
+  //Publish initial values
+  std_msgs::UInt8 pubState;
+  geometry_msgs::Twist botVel;
+  setBotToStop(botVel);
+  pubState.data = 0;
+
+  robotStatusPub.publish(pubState);
+  robotCmdPub.Publisher(botVel);
+
   ros::spin();
   //ROS_INFO is the replacement for printf/cout.
   ROS_INFO("tutorialROSOpenCV::main.cpp::No error.");
-
 }

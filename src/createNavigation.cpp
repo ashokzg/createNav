@@ -13,6 +13,7 @@
 #include <sensor_msgs/RegionOfInterest.h>
 #include <std_msgs/UInt8.h>
 #include <std_msgs/Float32.h>
+#include <geometry_msgs/Twist.h>
 
 //Store all constants for image encodings in the enc namespace to be used later.
 namespace enc = sensor_msgs::image_encodings;
@@ -52,23 +53,51 @@ static robotNavCtrlMode_t navCtrlMode;
 
 //Use method of ImageTransport to create image publisher
 image_transport::Publisher pub;
+ros::Publisher robotCmdPub;
 
 void setRobotCtrlCallBack(const std_msgs::UInt8& ctrl)
 {
-  if(sysState >= robotCtrlOn && sysState < missionComplete)
+  //Check if the received value is within range and set the appropriate mode
+  if(ctrl.data >= (int)navOff && ctrl.data <= (int)manualNav)
   {
-    switch(sysState)
-    {
-      case robotCtrlOn:
-        if(ctrl == 0);
-        break;
-    }
+    ROS_INFO("Mode changed to %d (0:Off 1:Auto 2:Manual)", ctrl.data);
+    navCtrlMode = (robotNavCtrlMode_t)ctrl.data;
   }
+}
+
+void manualCtrlCallBack(const geometry_msgs::Twist& manCmdVel)
+{
+  if(navCtrlMode == manualNav)
+    robotCmdPub.publish(manCmdVel);
 }
 
 void robotHeadingCallBack(const std_msgs::Float32& angle)
 {
-
+  if(sysState == robotCtrlOn && navCtrlMode == autoNav)
+  {
+    ROS_INFO("Angle is %f", angle.data);
+    geometry_msgs::Twist botVel;
+    if(angle.data > 0.5)
+    {
+        //Linear x is positive for forward direction
+        botVel.linear.x = 0.3;
+        //Angular z is negative for right
+        botVel.angular.z = -0.5;
+    }
+    else if(angle.data < -0.5)
+    {
+        //Linear x is positive for forward direction
+        botVel.linear.x = 0.3;
+        //Angular z is negative for right
+        botVel.angular.z = 0.5;
+    }
+    else if(angle.data != 0)
+    {
+        //Linear x is positive for forward direction
+        botVel.linear.x = 0.3;
+    }
+    robotCmdPub.publish(botVel);
+  }
 }
 
 void coordCallBack(const sensor_msgs::RegionOfInterest& roi)
@@ -139,12 +168,14 @@ int main(int argc, char **argv)
 
   //Initialize subscribers
   image_transport::Subscriber sub = it.subscribe("camera/image_raw", 1, imageCallback);
-  ros::Subscriber coordSub = nh.subscribe("dest_coord", 1, coordCallBack);
-  ros::Subscriber manAuto = nh.subscribe("RobotCtrlMode", 10, setRobotCtrlCallBack);
-  ros::Subscriber angleSub = nh.subscribe("robot_angle_variation", 10, robotHeadingCallBack);
+  ros::Subscriber coordSub  = nh.subscribe("dest_coord", 1, coordCallBack);
+  ros::Subscriber manAuto   = nh.subscribe("RobotCtrlMode", 10, setRobotCtrlCallBack);
+  ros::Subscriber angleSub  = nh.subscribe("robot_angle_variation", 10, robotHeadingCallBack);
+  ros::Subscriber manCmd    = nh.subscribe("man_cmd_vel", 100, manualCtrlCallBack);
 
   //Initialize the publishers
   pub = it.advertise("userImage", 1);
+  robotCmdPub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 100);
 
   //Initialize the system state
   sysState = startPrgm;

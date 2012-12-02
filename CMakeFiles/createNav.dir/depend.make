@@ -4,6 +4,8 @@
 CMakeFiles/createNav.dir/src/createNavigation.o: src/createNavigation.cpp
 CMakeFiles/createNav.dir/src/createNavigation.o: /opt/ros/fuerte/include/XmlRpcDecl.h
 CMakeFiles/createNav.dir/src/createNavigation.o: /opt/ros/fuerte/include/XmlRpcValue.h
+CMakeFiles/createNav.dir/src/createNavigation.o: /opt/ros/fuerte/include/geometry_msgs/Twist.h
+CMakeFiles/createNav.dir/src/createNavigation.o: /opt/ros/fuerte/include/geometry_msgs/Vector3.h
 CMakeFiles/createNav.dir/src/createNavigation.o: /opt/ros/fuerte/include/opencv2/core/core.hpp
 CMakeFiles/createNav.dir/src/createNavigation.o: /opt/ros/fuerte/include/opencv2/core/core_c.h
 CMakeFiles/createNav.dir/src/createNavigation.o: /opt/ros/fuerte/include/opencv2/core/mat.hpp
@@ -70,7 +72,9 @@ CMakeFiles/createNav.dir/src/createNavigation.o: /opt/ros/fuerte/include/sensor_
 CMakeFiles/createNav.dir/src/createNavigation.o: /opt/ros/fuerte/include/sensor_msgs/Image.h
 CMakeFiles/createNav.dir/src/createNavigation.o: /opt/ros/fuerte/include/sensor_msgs/RegionOfInterest.h
 CMakeFiles/createNav.dir/src/createNavigation.o: /opt/ros/fuerte/include/sensor_msgs/image_encodings.h
+CMakeFiles/createNav.dir/src/createNavigation.o: /opt/ros/fuerte/include/std_msgs/Float32.h
 CMakeFiles/createNav.dir/src/createNavigation.o: /opt/ros/fuerte/include/std_msgs/Header.h
+CMakeFiles/createNav.dir/src/createNavigation.o: /opt/ros/fuerte/include/std_msgs/UInt8.h
 CMakeFiles/createNav.dir/src/createNavigation.o: /opt/ros/fuerte/stacks/image_common/image_transport/include/image_transport/camera_publisher.h
 CMakeFiles/createNav.dir/src/createNavigation.o: /opt/ros/fuerte/stacks/image_common/image_transport/include/image_transport/camera_subscriber.h
 CMakeFiles/createNav.dir/src/createNavigation.o: /opt/ros/fuerte/stacks/image_common/image_transport/include/image_transport/exception.h

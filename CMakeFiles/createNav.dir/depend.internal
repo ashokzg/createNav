@@ -5,6 +5,8 @@ CMakeFiles/createNav.dir/src/createNavigation.o
  /home/ashok/fuerte_workspace/createNav/src/createNavigation.cpp
  /opt/ros/fuerte/include/XmlRpcDecl.h
  /opt/ros/fuerte/include/XmlRpcValue.h
+ /opt/ros/fuerte/include/geometry_msgs/Twist.h
+ /opt/ros/fuerte/include/geometry_msgs/Vector3.h
  /opt/ros/fuerte/include/opencv2/core/core.hpp
  /opt/ros/fuerte/include/opencv2/core/core_c.h
  /opt/ros/fuerte/include/opencv2/core/mat.hpp
@@ -71,7 +73,9 @@ CMakeFiles/createNav.dir/src/createNavigation.o
  /opt/ros/fuerte/include/sensor_msgs/Image.h
  /opt/ros/fuerte/include/sensor_msgs/RegionOfInterest.h
  /opt/ros/fuerte/include/sensor_msgs/image_encodings.h
+ /opt/ros/fuerte/include/std_msgs/Float32.h
  /opt/ros/fuerte/include/std_msgs/Header.h
+ /opt/ros/fuerte/include/std_msgs/UInt8.h
  /opt/ros/fuerte/stacks/image_common/image_transport/include/image_transport/camera_publisher.h
  /opt/ros/fuerte/stacks/image_common/image_transport/include/image_transport/camera_subscriber.h
  /opt/ros/fuerte/stacks/image_common/image_transport/include/image_transport/exception.h

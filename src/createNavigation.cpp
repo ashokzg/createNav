@@ -78,6 +78,11 @@ void manualCtrlCallBack(const geometry_msgs::Twist& manCmdVel)
     robotCmdPub.publish(manCmdVel);
 }
 
+void robotAreaCallBack(const std_msgs::Float32& area)
+{
+
+}
+
 void robotStatusCallBack(const std_msgs::UInt8& robot_status)
 {
 
@@ -207,16 +212,25 @@ int main(int argc, char **argv)
   image_transport::ImageTransport it(nh);
 
   //Initialize subscribers
+  //Published by camera node
   image_transport::Subscriber sub = it.subscribe("camera/image_raw", 1, imageCallback);
+
+  //Published by UI node
   ros::Subscriber coordSub  = nh.subscribe("dest_coord", 1, coordCallBack);
   ros::Subscriber manAuto   = nh.subscribe("RobotCtrlMode", 10, setRobotCtrlCallBack);
-  ros::Subscriber angleSub  = nh.subscribe("robot_angle_variation", 10, robotHeadingCallBack);
   ros::Subscriber manCmd    = nh.subscribe("man_cmd_vel", 100, manualCtrlCallBack);
+
+  //Published by computer vision node
+  ros::Subscriber angleSub  = nh.subscribe("robot_angle_variation", 10, robotHeadingCallBack);
   ros::Subscriber statusSub = nh.subscribe("robot_status", 1, robotStatusCallBack);
+  ros::Subscriber destAreaSub = nh.subscribe("area_of_destination", 10, robotAreaCallBack);
 
   //Initialize the publishers
-  pub = it.advertise("userImage", 1);
+  //Subscribed by irobot node
   robotCmdPub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 100);
+
+  //Subscribed by UI node
+  pub = it.advertise("userImage", 1);
   robotStatusPub = nh.advertise<std_msgs::UInt8>("robot_state", 10);
 
   //Initialize the system state
@@ -230,7 +244,7 @@ int main(int argc, char **argv)
   pubState.data = 0;
 
   robotStatusPub.publish(pubState);
-  robotCmdPub.Publisher(botVel);
+  robotCmdPub.publish(botVel);
 
   ros::spin();
   //ROS_INFO is the replacement for printf/cout.

@@ -228,8 +228,10 @@ void imageCallback(const sensor_msgs::ImageConstPtr& original_image)
   //if(sysState == startPrgm)
   if(sysState < robotCtrlOn)
   {
+    //ROS_INFO("imgCount %d", imgCount);
     if(imgCount >= 15)
     {
+      ROS_INFO("INFO: SENDING IMAGE TO USER");
       imgCount = 0;
       sysState = pictureSentToUser;
 

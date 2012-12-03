@@ -73,7 +73,7 @@ void sensorCallBack(const irobot_create_2_1::SensorPacket& sensors)
 {
   geometry_msgs::Twist botVel;
   //Ultrasonic sensor signal should be monitored for obstacles
-  if(sensors.user_analog_signal < 20)
+  if(sensors.user_analog_signal < 80)
   {
     setBotToStop(botVel);
     ROS_INFO("WARNING: OBSTACLE");
@@ -228,10 +228,8 @@ void imageCallback(const sensor_msgs::ImageConstPtr& original_image)
   //if(sysState == startPrgm)
   if(sysState < robotCtrlOn)
   {
-    //ROS_INFO("imgCount %d", imgCount);
     if(imgCount >= 15)
     {
-      ROS_INFO("INFO: SENDING IMAGE TO USER");
       imgCount = 0;
       sysState = pictureSentToUser;
 

@@ -72,14 +72,33 @@ ros::Publisher robotStatusPub;
 void sensorCallBack(const irobot_create_2_1::SensorPacket& sensors)
 {
   geometry_msgs::Twist botVel;
+  bool flag = false;
   //Ultrasonic sensor signal should be monitored for obstacles
-  if(sensors.user_analog_signal < 80)
+  if(sensors.user_analog_signal < 40)
   {
     setBotToStop(botVel);
     ROS_INFO("WARNING: OBSTACLE");
     ROS_INFO("The sensor distance is %d",sensors.user_analog_signal);
-    robotCmdPub.publish(botVel);
     sysState = obstacleDetected;
+    flag = true;
+  }
+  else if(sensors.user_analog_signal < 60)
+  {
+    setBotToStop(botVel);
+    botVel.linear.x = 0.1;
+    flag = true;
+  }
+  else if(sensors.user_analog_signal < 80)
+  {
+    setBotToStop(botVel);
+    botVel.linear.x = 0.2;
+    flag = true;
+  }
+
+
+  if(flag == true)
+  {
+    robotCmdPub.publish(botVel);
   }
 }
 
@@ -163,24 +182,24 @@ void robotHeadingCallBack(const std_msgs::Float32& angle)
   {
     ROS_INFO("Angle is %f", angle.data);
     geometry_msgs::Twist botVel;
-    if(angle.data > 0.1)
+    if(angle.data > 0.2)
     {
         //Linear x is positive for forward direction
         botVel.linear.x = 0.3;
         //Angular z is negative for right
-        botVel.angular.z = -0.5;
+        botVel.angular.z = -0.4;
     }
-    else if(angle.data < -0.1)
+    else if(angle.data < -0.2)
     {
         //Linear x is positive for forward direction
         botVel.linear.x = 0.3;
         //Angular z is negative for right
-        botVel.angular.z = 0.5;
+        botVel.angular.z = 0.4;
     }
     else
     {
         //Linear x is positive for forward direction
-        botVel.linear.x = 0.3;
+        botVel.linear.x = 0.5;
     }
     robotCmdPub.publish(botVel);
   }

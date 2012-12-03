@@ -61,7 +61,11 @@ image_transport::Publisher pub;
 ros::Publisher robotCmdPub;
 
 /* Publishes a UInt8 message with the following enum
- *
+ * 0: Idle
+ * 1: Moving to Destination
+ * 2: Lost Destination
+ * 3: Reached Destination
+ * 4: Mission Complete
  */
 ros::Publisher robotStatusPub;
 
@@ -107,22 +111,40 @@ void robotAreaCallBack(const std_msgs::Float32& area)
 
 void robotStatusCallBack(const std_msgs::UInt8& robot_status)
 {
+  std_msgs::UInt8 pubState;
+  switch(robot_status.data)
+  {
+    //Image processing IDLE
+    case 0:
+      break;
+    //Image processing is tracking the destination
+    case 1:
+      pubState.data = 1;
+      robotStatusPub.publish(pubState);
+      break;
+    //Image processing has lost destination
+    case 2:
+      pubState.data = 2;
+      robotStatusPub.publish(pubState);
+      geometry_msgs::Twist botVel;
+      setBotToStop(botVel);
+      robotCmdPub.publish(botVel);
+      navCtrlMode = navOff;
+      sysState = startPrgm;
+      /* Switching to manual navigation because the destination is lost*/
+      ROS_INFO("***ERROR: DESTINATION LOST. RESETTING TO INITIAL STATE TO RESUME OPERATION***");
+      ROS_INFO("***ERROR: STOPPING ROBOT MOTION***");
+      break;
+  }
 
-  if(robot_status.data == 2)
-  {
-    navCtrlMode = navOff;
-    sysState = startPrgm;
-    /* Switching to manual navigation because the destination is lost*/
-    ROS_INFO("***ERROR: DESTINATION LOST. RESETTING TO INITIAL STATE TO RESUME OPERATION");
-  }
-  if(robot_status.data == 3)
-  {
-    ROS_INFO("---SUCCESS: REACHED DESTINATION, BITCH!!---");
-    sysState = robotCtrlOff;
-    geometry_msgs::Twist botVel;
-    setBotToStop(botVel);
-    robotCmdPub.publish(botVel);
-  }
+//  if(robot_status.data == 3)
+//  {
+//    ROS_INFO("---SUCCESS: REACHED DESTINATION, BITCH!!---");
+//    sysState = robotCtrlOff;
+//    geometry_msgs::Twist botVel;
+//    setBotToStop(botVel);
+//    robotCmdPub.publish(botVel);
+//  }
 }
 
 void setBotToStop(geometry_msgs::Twist& botVel)
@@ -141,10 +163,10 @@ void robotHeadingCallBack(const std_msgs::Float32& angle)
   {
     ROS_INFO("Angle is %f", angle.data);
     geometry_msgs::Twist botVel;
-    if(angle.data > 0.3)
+    if(angle.data > 0.1)
     {
         //Linear x is positive for forward direction
-        botVel.linear.x = 0.1;
+        botVel.linear.x = 0.3;
         //Angular z is negative for right
         botVel.angular.z = -0.5;
     }
@@ -171,9 +193,6 @@ void coordCallBack(const sensor_msgs::RegionOfInterest& roi)
     ROS_INFO("DESTINATION RECEIVED BY ROBOT. WILL START NAVIGATION");
     sysState = robotCtrlOn;
     navCtrlMode = autoNav;
-    std_msgs::UInt8 pubState;
-    pubState.data = 1;
-    robotStatusPub.publish(pubState);
   }
   else
   {
@@ -209,7 +228,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& original_image)
   //if(sysState == startPrgm)
   if(sysState < robotCtrlOn)
   {
-    if(imgCount == 15)
+    if(imgCount >= 15)
     {
       imgCount = 0;
       sysState = pictureSentToUser;
@@ -247,13 +266,14 @@ int main(int argc, char **argv)
   ros::Subscriber manCmd    = nh.subscribe("man_cmd_vel", 100, manualCtrlCallBack);
 
   //Published by computer vision node
-  ros::Subscriber angleSub  = nh.subscribe("robot_angle_variation", 10, robotHeadingCallBack);
-  ros::Subscriber statusSub = nh.subscribe("robot_status", 1, robotStatusCallBack);
-  ros::Subscriber destAreaSub = nh.subscribe("area_of_destination", 10, robotAreaCallBack);
+  ros::Subscriber angleSub  = nh.subscribe("robot_angle", 10, robotHeadingCallBack);
+  ros::Subscriber statusSub = nh.subscribe("improc_state", 1, robotStatusCallBack);
+  ros::Subscriber destAreaSub = nh.subscribe("dest_area", 10, robotAreaCallBack);
 
   //Published by irobot_create node
   ros::Subscriber createSensorSub = nh.subscribe("sensorPacket", 10, sensorCallBack);
 
+  //---------------------------
   //Initialize the publishers
   //Subscribed by irobot node
   robotCmdPub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 100);

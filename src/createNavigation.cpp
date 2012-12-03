@@ -14,6 +14,8 @@
 #include <std_msgs/UInt8.h>
 #include <std_msgs/Float32.h>
 #include <geometry_msgs/Twist.h>
+#include "../../brownCreate/brown_drivers/irobot_create_2_1/msg_gen/cpp/include/irobot_create_2_1/SensorPacket.h"
+
 
 void setBotToStop(geometry_msgs::Twist& botVel);
 
@@ -62,6 +64,16 @@ ros::Publisher robotCmdPub;
  */
 ros::Publisher robotStatusPub;
 
+void sensorCallBack(const irobot_create_2_1::SensorPacket& sensors)
+{
+  //Ultrasonic sensor signal should be monitored for obstacles
+  if(sensors.user_analog_signal < 20)
+  {
+    ROS_INFO("WARNING: OBSTACLE");
+    ROS_INFO("The sensor distance is %d",sensors.user_analog_signal);
+  }
+}
+
 void setRobotCtrlCallBack(const std_msgs::UInt8& ctrl)
 {
   //Check if the received value is within range and set the appropriate mode
@@ -80,6 +92,11 @@ void manualCtrlCallBack(const geometry_msgs::Twist& manCmdVel)
 
 void robotAreaCallBack(const std_msgs::Float32& area)
 {
+  if(area.data > (float)(320*240))
+  {
+    printf("***DESTINATION REACHED BASED ON AREA");
+    //TBD implement a publisher for robot state
+  }
 
 }
 
@@ -138,7 +155,7 @@ void robotHeadingCallBack(const std_msgs::Float32& angle)
         //Linear x is positive for forward direction
         botVel.linear.x = 0.3;
     }
-    robotCmdPub.publish(botVel);
+    //robotCmdPub.publish(botVel);
   }
 }
 
@@ -162,33 +179,36 @@ void coordCallBack(const sensor_msgs::RegionOfInterest& roi)
 //This function is called everytime a new image is published
 void imageCallback(const sensor_msgs::ImageConstPtr& original_image)
 {
-  if(sysState == startPrgm)
+  //Convert from the ROS image message to a CvImage suitable for working with OpenCV for processing
+  cv_bridge::CvImagePtr cv_ptr;
+
+  imgCount++;
+  try
   {
-    imgCount++;
+      //Always copy, returning a mutable CvImage
+      //OpenCV expects color images to use BGR channel order.
+      cv_ptr = cv_bridge::toCvCopy(original_image, enc::BGR8);
+  }
+  catch (cv_bridge::Exception& e)
+  {
+      //if there is an error during conversion, display it
+      ROS_ERROR("tutorialROSOpenCV::main.cpp::cv_bridge exception: %s", e.what());
+      return;
+  }
+
+  //Display the image using OpenCV
+  cv::imshow(WINDOW, cv_ptr->image);
+  //Add some delay in milliseconds. The function only works if there is at least one HighGUI window created and the window is active. If there are several HighGUI windows, any of them can be active.
+  cv::waitKey(3);
+
+  //if(sysState == startPrgm)
+  if(sysState < robotCtrlOn)
+  {
     if(imgCount == 15)
     {
-      sysState = pictureSentToUser;
       imgCount = 0;
+      sysState = pictureSentToUser;
 
-      //Convert from the ROS image message to a CvImage suitable for working with OpenCV for processing
-      cv_bridge::CvImagePtr cv_ptr;
-      try
-      {
-          //Always copy, returning a mutable CvImage
-          //OpenCV expects color images to use BGR channel order.
-          cv_ptr = cv_bridge::toCvCopy(original_image, enc::BGR8);
-      }
-      catch (cv_bridge::Exception& e)
-      {
-          //if there is an error during conversion, display it
-          ROS_ERROR("tutorialROSOpenCV::main.cpp::cv_bridge exception: %s", e.what());
-          return;
-      }
-
-      //Display the image using OpenCV
-      cv::imshow(WINDOW, cv_ptr->image);
-      //Add some delay in milliseconds. The function only works if there is at least one HighGUI window created and the window is active. If there are several HighGUI windows, any of them can be active.
-      cv::waitKey(3);
       /**
       * The publish() function is how you send messages. The parameter
       * is the message object. The type of this object must agree with the type
@@ -205,6 +225,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& original_image)
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "create_navigation");
+  ROS_INFO("Node started");
 
   //Create the ROS node handle
   ros::NodeHandle nh;
@@ -225,12 +246,15 @@ int main(int argc, char **argv)
   ros::Subscriber statusSub = nh.subscribe("robot_status", 1, robotStatusCallBack);
   ros::Subscriber destAreaSub = nh.subscribe("area_of_destination", 10, robotAreaCallBack);
 
+  //Published by irobot_create node
+  ros::Subscriber createSensorSub = nh.subscribe("sensorPacket", 10, sensorCallBack);
+
   //Initialize the publishers
   //Subscribed by irobot node
   robotCmdPub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 100);
 
   //Subscribed by UI node
-  pub = it.advertise("userImage", 1);
+  pub = it.advertise("camera/userImage", 1);
   robotStatusPub = nh.advertise<std_msgs::UInt8>("robot_state", 10);
 
   //Initialize the system state

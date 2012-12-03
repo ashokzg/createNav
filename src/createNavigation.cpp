@@ -24,7 +24,6 @@ namespace enc = sensor_msgs::image_encodings;
 
 //Declare a string with the name of the window that we will create using OpenCV where processed images will be displayed.
 static const char WINDOW[] = "Image Processed";
-static bool destPresent = false;
 
 static int imgCount;
 
@@ -73,7 +72,6 @@ ros::Publisher robotStatusPub;
 void sensorCallBack(const irobot_create_2_1::SensorPacket& sensors)
 {
   geometry_msgs::Twist botVel;
-  std_msgs::UInt8 pubState;
   bool flag = false;
   //Ultrasonic sensor signal should be monitored for obstacles
   if(sensors.user_analog_signal < 40)
@@ -81,37 +79,24 @@ void sensorCallBack(const irobot_create_2_1::SensorPacket& sensors)
     setBotToStop(botVel);
     ROS_INFO("WARNING: OBSTACLE");
     ROS_INFO("The sensor distance is %d",sensors.user_analog_signal);
-    //sysState = obstacleDetected;
-    if(destPresent == false)
-    {
-      navCtrlMode = navOff;
-      sysState = startPrgm;
-      pubState.data = 2;
-      robotStatusPub.publish(pubState);
-    }
+    sysState = obstacleDetected;
     flag = true;
   }
   else if(sensors.user_analog_signal < 60)
   {
     setBotToStop(botVel);
-    //if(sysState == robotCtrlOn)
+    if(sysState == robotCtrlOn)
       botVel.linear.x = 0.1;
     flag = true;
   }
   else if(sensors.user_analog_signal < 80)
   {
     setBotToStop(botVel);
-    //if(sysState == robotCtrlOn)
+    if(sysState == robotCtrlOn)
       botVel.linear.x = 0.2;
     flag = true;
   }
 
-  //To stop it from running while lifting
-  if(sensors.cliffFronLeft > 0)
-  {
-    setBotToStop(botVel);
-    flag = true;
-  }
 
   if(flag == true)
   {
@@ -145,7 +130,6 @@ void robotAreaCallBack(const std_msgs::Float32& area)
     pubState.data = 3;
     robotStatusPub.publish(pubState);
   }
-
 }
 
 void robotStatusCallBack(const std_msgs::UInt8& robot_status)
@@ -158,13 +142,11 @@ void robotStatusCallBack(const std_msgs::UInt8& robot_status)
       break;
     //Image processing is tracking the destination
     case 1:
-      destPresent = true;
       pubState.data = 1;
       robotStatusPub.publish(pubState);
       break;
     //Image processing has lost destination
     case 2:
-      destPresent = false;
       pubState.data = 2;
       robotStatusPub.publish(pubState);
       geometry_msgs::Twist botVel;
